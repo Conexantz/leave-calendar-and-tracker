@@ -102,7 +102,7 @@ const ICON={
 const viewerSel=document.getElementById('viewer');
 viewerSel.innerHTML=people.map(p=>`<option value="${p.id}">${esc(p.name)} · ${esc(p.role)}</option>`).join('');
 viewerSel.value=state.viewer;
-viewerSel.addEventListener('change',()=>{state.viewer=viewerSel.value;state.view=isLead()?'review':'status';state.pinned=null;closeSheet();render()});
+viewerSel.addEventListener('change',()=>{state.viewer=viewerSel.value;state.view=isLead()?'review':'status';state.pinned=null;state.sm=null;closeSheet();render()});
 
 function renderTabs(){
   const unread=notes.filter(n=>n.to===state.viewer&&!n.read).length;
@@ -322,32 +322,99 @@ function renderStatus(){
   const mine=requests.filter(r=>r.who===state.viewer).sort((a,b)=>a.start<b.start?1:-1);
   const myNotes=notes.filter(n=>n.to===state.viewer);
   const unread=myNotes.filter(n=>!n.read).length;
+  const hero=heroFor(mine);
+  if(!state.sm){const d=hero.r?parse(hero.r.start):TODAY;state.sm={y:d.getFullYear(),m:d.getMonth()}}
+  const pend=mine.filter(r=>r.status==='pending').sort((a,b)=>a.start<b.start?-1:1);
+  const decider=isLead()?'review':'Maya to decide';
   el.innerHTML=`
-  <div class="view-head"><div><h2>Hi ${esc(first(state.viewer))}</h2><p>${statusLine(mine)}</p></div></div>
-  <div class="status">
-    <div>
-      <div class="panel-title"><h3>My leave requests</h3><span class="eyebrow">${plural(mine.length,'request')}</span></div>
-      <div class="rlist">${mine.length?mine.map(rcard).join(''):`
-        <div class="card empty">${ICON.plane}<h4>No requests yet</h4><p>When you apply for leave, you’ll be able to follow it here from pending to decided.</p><button class="btn primary" data-tab="apply">Request leave</button></div>`}
+  <div class="s-wrap">
+    <section class="s-hero" aria-label="Your leave at a glance">
+      <div class="s-hero-text">
+        <div class="s-hi">Hi ${esc(first(state.viewer))}</div>
+        <div class="s-num">${hero.n}</div>
+        <div class="s-head">${hero.head}</div>
+        <p class="s-sub">${hero.sub}</p>
+        ${hero.cta?`<button class="btn primary" data-tab="apply">Request leave</button>`:''}
       </div>
-    </div>
-    <div>
+      ${ART}
+    </section>
+
+    <section class="card s-cal" aria-label="My leave calendar">${myCal(mine)}</section>
+
+    <section class="card sv" aria-label="Pending requests">
+      <div class="sv-text">
+        ${pend.length?`<div class="sv-title">Pending <span>×${pend.length}</span></div><p>Waiting for ${decider}. Updates appear below as soon as there’s a decision.</p>`
+          :`<div class="sv-title">All decided <span class="ok">✓</span></div><p>Nothing is waiting for a decision right now.</p>`}
+      </div>
+      <div class="sv-div" aria-hidden="true"></div>
+      <div class="sv-badges">${pend.length?pend.slice(0,3).map(r=>`<span class="tok" title="${esc(TYPES[r.type].label+', '+rangeShort(r.start,r.end))}"><b>${r.days}d</b><small>${esc(TYPES[r.type].short)}</small></span>`).join('')+(pend.length>3?`<span class="tok more"><b>+${pend.length-3}</b></span>`:'')
+        :`<span class="tok done" aria-hidden="true">${ICON.ok}</span>`}</div>
+    </section>
+
+    <section>
       <div class="panel-title"><h3>Updates</h3>${unread?`<button class="linkbtn" data-act="readall">Mark all as read</button>`:''}</div>
       <div class="card notes">${myNotes.length?myNotes.map(n=>`
         <div class="note${n.read?'':' unread'}"><span class="nd ${n.kind}"></span><div><div class="nx">${esc(n.text)}</div><div class="nt">${ago(n.t)}</div></div></div>`).join(''):`
         <div class="empty">${ICON.bell}<h4>Nothing new</h4><p>When a request is approved or rejected, you’ll see it here first.</p></div>`}
       </div>
-    </div>
+    </section>
+
+    <section>
+      <div class="panel-title"><h3>All my requests</h3><span class="eyebrow">${plural(mine.length,'request')}</span></div>
+      <div class="rlist">${mine.length?mine.map(rcard).join(''):`
+        <div class="card empty">${ICON.plane}<h4>No requests yet</h4><p>When you apply for leave, you’ll be able to follow it here from pending to decided.</p><button class="btn primary" data-tab="apply">Request leave</button></div>`}
+      </div>
+    </section>
   </div>`;
 }
-function statusLine(mine){
-  const p=mine.filter(r=>r.status==='pending').length;
-  const up=mine.filter(r=>r.status==='approved'&&r.end>=TODAY_ISO).sort((a,b)=>a.start<b.start?-1:1)[0];
-  const bits=[];
-  if(p)bits.push(`${plural(p,'request')} waiting for a decision.`);
-  if(up)bits.push(`Next approved leave: ${range(up.start,up.end)}.`);
-  return bits.length?bits.join(' '):'You have no pending or upcoming leave.';
+function heroFor(mine){
+  const byStart=(a,b)=>a.start<b.start?-1:1;
+  const up=mine.filter(r=>r.status==='approved'&&r.end>=TODAY_ISO).sort(byStart)[0];
+  const pend=mine.filter(r=>r.status==='pending').sort(byStart);
+  if(up){
+    if(up.start<=TODAY_ISO){const n=span(TODAY_ISO,up.end);return{n,head:n===1?'last day of leave':'days of leave left',sub:`You’re on ${tl(up)} until ${fmt(up.end)}. Enjoy the break.`,r:up}}
+    const n=span(TODAY_ISO,up.start)-1;
+    return{n,head:n===1?'day until your leave':'days until your leave',sub:`${range(up.start,up.end)} · ${TYPES[up.type].label} · ${plural(up.days,'day')}`,r:up};
+  }
+  if(pend.length)return{n:pend.length,head:pend.length===1?'request in review':'requests in review',sub:`No approved leave coming up yet. You’ll hear here as soon as ${isLead()?'it’s reviewed':'Maya decides'}.`,r:pend[0]};
+  return{n:0,head:'days of leave booked',sub:'Nothing coming up yet. Plan a break and it will show here.',r:null,cta:true};
 }
+function myCal(mine){
+  const {y,m}=state.sm;
+  const firstDay=new Date(y,m,1),lead=(firstDay.getDay()+6)%7,dim=new Date(y,m+1,0).getDate();
+  const act=mine.filter(active);
+  let cells='';
+  for(let i=0;i<lead;i++)cells+='<div class="sc-day blank"></div>';
+  for(let d=1;d<=dim;d++){
+    const di=iso(new Date(y,m,d)),col=(lead+d-1)%7;
+    const r=act.find(x=>x.start<=di&&di<=x.end);
+    let band='',cls='';
+    if(r){
+      const capL=di===r.start||col===0||d===1,capR=di===r.end||col===6||d===dim;
+      band=`<span class="sc-band ${r.status}${capL?' l':''}${capR?' r':''}"></span>`;
+      cls=` on ${r.status}${di===r.start||di===r.end?' edge':''}`;
+    }
+    const lbl=parse(di).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})+(r?`: ${TYPES[r.type].label}, ${r.status}`:'');
+    cells+=`<div class="sc-day${cls}${di===TODAY_ISO?' today':''}" title="${esc(lbl)}" aria-label="${esc(lbl)}">${band}<span class="sc-n">${d}</span></div>`;
+  }
+  const monthStart=iso(firstDay),monthEnd=iso(new Date(y,m,dim));
+  const daysOff=act.reduce((t,r)=>{if(r.status!=='approved'||r.end<monthStart||r.start>monthEnd)return t;const s=r.start<monthStart?monthStart:r.start,e=r.end>monthEnd?monthEnd:r.end;return t+span(s,e)},0);
+  return `<div class="sc-head">
+      <h3>${firstDay.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</h3>
+      <button class="iconbtn" data-act="sprev" aria-label="Previous month">${ICON.prev}</button>
+      <button class="iconbtn" data-act="snext" aria-label="Next month">${ICON.next}</button>
+    </div>
+    <div class="sc-grid">${['M','T','W','T','F','S','S'].map(d=>`<div class="sc-dow">${d}</div>`).join('')}${cells}</div>
+    <div class="sc-foot"><span><i class="sw approved-soft"></i>Approved</span><span><i class="sw pending-dash"></i>Pending</span><span class="sc-total">${plural(daysOff,'approved day')} this month</span></div>`;
+}
+const ART=`<svg class="s-art" viewBox="0 0 140 140" aria-hidden="true">
+  <circle cx="102" cy="36" r="22" fill="var(--sun)"/>
+  <path d="M54 52V42a10 10 0 0 1 10-10h12a10 10 0 0 1 10 10v10" fill="none" stroke="var(--accent)" stroke-width="7" stroke-linecap="round"/>
+  <rect x="18" y="50" width="104" height="74" rx="22" fill="var(--sun-2)"/>
+  <rect x="44" y="50" width="11" height="74" fill="var(--accent)" opacity=".8"/>
+  <rect x="85" y="50" width="11" height="74" fill="var(--accent)" opacity=".8"/>
+  <circle cx="70" cy="88" r="4" fill="var(--accent)" opacity=".5"/>
+</svg>`;
 function rcard(r){
   const decidedTxt=r.status==='pending'?'Waiting for Maya':`${cap(r.status)} ${fmt(r.decided)}`;
   return `<article class="card rcard">
@@ -416,6 +483,7 @@ document.addEventListener('click',e=>{
     else if(act==='show')showOnCal(id,true);
     else if(act==='prev'||act==='next'){const d=new Date(state.year,state.month+(act==='next'?1:-1),1);state.year=d.getFullYear();state.month=d.getMonth();renderCal()}
     else if(act==='today'){state.year=TODAY.getFullYear();state.month=TODAY.getMonth();renderCal()}
+    else if(act==='sprev'||act==='snext'){const d=new Date(state.sm.y,state.sm.m+(act==='snext'?1:-1),1);state.sm={y:d.getFullYear(),m:d.getMonth()};renderStatus()}
     else if(act==='readall'){notes.forEach(n=>{if(n.to===state.viewer)n.read=true});render()}
     return;
   }
@@ -452,7 +520,7 @@ document.addEventListener('submit',e=>{
   requests.push(r);
   note(state.viewer,'pending',`Your ${tl(r)} request for ${rangeShort(s,en)} (${plural(r.days,'day')}) was sent to Maya Lim for review.`,Date.now(),true);
   if(state.viewer!==LEAD)note(LEAD,'pending',asked(r),Date.now(),false);
-  state.view='status';render();window.scrollTo({top:0});
+  state.view='status';state.sm=null;render();window.scrollTo({top:0});
   toast(isLead()?'Request added to your review queue':'Request sent to Maya · status: Pending');
 });
 
@@ -460,6 +528,7 @@ document.addEventListener('submit',e=>{
 function render(){
   if(!isLead()&&state.view==='review')state.view='status';
   renderTabs();
+  document.body.classList.toggle('status-bg',state.view==='status');
   ['review','apply','status'].forEach(v=>document.getElementById('v-'+v).hidden=state.view!==v);
   if(isLead())renderReview();else document.getElementById('v-review').innerHTML='';
   renderApply();renderStatus();
