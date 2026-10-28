@@ -3,7 +3,7 @@
 A single-page prototype for a small team to request leave, see it on a shared calendar, and approve or reject it. Plain HTML, CSS and JavaScript with no build step.
 
 ## Screens
-- **Review & calendar** (team lead): month calendar showing each person's leave as a bar (name · leave type · days). Click a bar to approve, reject or reopen. Amber days flag 2+ people off. A review queue sits beside it with overlap warnings and one-click decisions.
+- **Review & calendar** (team lead): month calendar showing each person's leave as a bar (name · leave type · days). Click a bar to approve, reject or reopen. Amber days flag 2+ people off. A review queue sits below it with overlap warnings and one-click decisions; every screen uses a single centred column.
 - **Request leave**: applicant and application date fill in automatically; choose Annual, Sick, Family care or Childcare leave and the dates. Duration counts calendar days including weekends.
 - **Appearance toggle**: the header button switches between light and dark mode. It starts from the device setting and remembers your choice in this browser.
 - **My status & updates**: a warm, single-column view led by an oversized countdown to your next leave, a personal month calendar with approved and pending leave shown as pills, a pending-requests card, the notifications feed, and every request with its status (Pending / Approved / Rejected).

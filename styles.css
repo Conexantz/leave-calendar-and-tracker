@@ -409,3 +409,10 @@ main.wrap{padding-block:14px 72px}
   .cal-head .btn.small{padding:5px 10px}
   .cal-head .iconbtn{width:32px;height:32px}
 }
+
+/* ---------- Single column everywhere ---------- */
+.s-wrap,.r-hero,.review{max-width:720px;margin-left:auto;margin-right:auto}
+.review{display:grid;grid-template-columns:1fr;gap:22px}
+.r-hero{margin-bottom:18px}
+.cal{scroll-margin-top:calc(150px + env(safe-area-inset-top,0px))}
+.r-side{gap:14px}

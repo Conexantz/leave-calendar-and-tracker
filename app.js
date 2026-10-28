@@ -246,7 +246,7 @@ function showOnCal(id,jump){
   if(jump&&(s.getFullYear()!==state.year||s.getMonth()!==state.month)){state.year=s.getFullYear();state.month=s.getMonth();renderCal()}
   else paintHighlight(id);
   document.querySelectorAll('.qcard').forEach(c=>c.classList.toggle('pinned',c.dataset.req===id));
-  if(jump&&window.matchMedia('(max-width:980px)').matches)document.getElementById('cal').scrollIntoView({behavior:'smooth',block:'start'});
+  if(jump){const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;document.getElementById('cal').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'})}
 }
 
 /* ---------- Detail sheet (from calendar) ---------- */
