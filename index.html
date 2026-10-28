@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leave Planner</title>
+<meta name="description" content="Submit leave requests, review them on a shared team calendar with overlap warnings, and track approval status.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="6" width="28" height="25" rx="7" fill="var(--accent-soft)"/><rect x="3" y="6" width="28" height="8" rx="4" fill="var(--accent)"/><rect x="9" y="3" width="3" height="7" rx="1.5" fill="var(--accent)"/><rect x="22" y="3" width="3" height="7" rx="1.5" fill="var(--accent)"/><path d="M11 22.5l4 3.5 8-8" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h1>Leave Planner</h1><small>Team Orbit · sample data resets on refresh</small></div>
+    </div>
+    <label class="viewer" for="viewer">Viewing as
+      <select id="viewer"></select>
+    </label>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="v-review" hidden></section>
+  <section id="v-apply" hidden></section>
+  <section id="v-status" hidden></section>
+</main>
+
+<div class="scrim" id="scrim" hidden><div class="card sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-msg"></span><button id="toast-undo" hidden>Undo</button></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
