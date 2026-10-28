@@ -8,6 +8,9 @@ A single-page prototype for a small team to request leave, see it on a shared ca
 - **Appearance toggle**: the header button switches between light and dark mode. It starts from the device setting and remembers your choice in this browser.
 - **My status & updates**: a warm, single-column view led by an oversized countdown to your next leave, a personal month calendar with approved and pending leave shown as pills, a pending-requests card, the notifications feed, and every request with its status (Pending / Approved / Rejected).
 
+## Design
+Warm, encouraging look inspired by a streak-calendar reference: cream background, rounded heavy headings, soft rounded cards, an oversized number with an original illustration at the top of each screen, month arrows inside each calendar card, and a compact summary card. Light and dark themes are both supported.
+
 ## Prototype limits
 - No login: the "Viewing as" selector stands in for identity (Maya Lim is the team lead).
 - Fictional sample data lives in memory and resets on refresh.

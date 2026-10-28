@@ -108,9 +108,9 @@ function renderTabs(){
   const unread=notes.filter(n=>n.to===state.viewer&&!n.read).length;
   const pend=requests.filter(r=>r.status==='pending').length;
   const tabs=[];
-  if(isLead())tabs.push(['review','Review & calendar',pend]);
+  if(isLead())tabs.push(['review','Review',pend]);
   tabs.push(['apply','Request leave',0]);
-  tabs.push(['status',isLead()?'My requests & updates':'My status & updates',unread]);
+  tabs.push(['status',isLead()?'My requests':'My status',unread]);
   document.getElementById('tabs').innerHTML=tabs.map(([id,label,n])=>`<button class="tab" role="tab" data-tab="${id}" aria-selected="${state.view===id}">${label}${n?`<span class="badge" aria-label="${n} new">${n}</span>`:''}</button>`).join('');
 }
 
@@ -119,33 +119,49 @@ function renderReview(){
   const el=document.getElementById('v-review');
   const pending=requests.filter(r=>r.status==='pending').sort((a,b)=>a.start<b.start?-1:1);
   const decided=requests.filter(r=>r.status!=='pending'&&r.decided&&r.end>=TODAY_ISO).sort((a,b)=>a.start<b.start?-1:1);
+  const clashing=pending.filter(r=>clashesFor(r).length).length;
   el.innerHTML=`
-  <div class="view-head"><div><h2>Review leave</h2><p>Click any name on the calendar to see the request and approve, reject or reopen it. Amber days already have two or more people away.</p></div></div>
+  <section class="s-hero r-hero" aria-label="Review summary">
+    <div class="s-hero-text">
+      <div class="s-hi">Hi ${esc(first(state.viewer))}</div>
+      <div class="s-num">${pending.length}</div>
+      <div class="s-head">${pending.length===1?'request waiting for you':pending.length?'requests waiting for you':'requests waiting. All caught up'}</div>
+      <p class="s-sub">${pending.length?`${clashing?`${plural(clashing,'request')} overlap${clashing===1?'s':''} with someone else’s leave. `:'No overlaps to worry about. '}Click any name on the calendar to approve, reject or reopen it.`:'New requests will appear here and on the calendar the moment someone applies.'}</p>
+    </div>
+    ${ART_REVIEW}
+  </section>
   <div class="review">
     <div class="card cal" id="cal"></div>
-    <div>
+    <div class="r-side">
       <div class="panel-title"><h3>Waiting for you</h3><span class="eyebrow">${plural(pending.length,'request')}</span></div>
       <div class="queue">${pending.length?pending.map(qcard).join(''):`
         <div class="card empty">${ICON.calm}<h4>You’re all caught up</h4><p>New leave requests will show up here the moment someone applies.</p></div>`}
       </div>
-      <div class="decided">
-        <div class="panel-title"><h3>Decided, upcoming</h3><span class="eyebrow">Change anytime</span></div>
-        <p class="dnote">You can reverse a decision until the leave ends, or send it back to pending. The applicant is told each time.</p>
-        <div class="card" style="padding:4px 16px">${decided.length?decided.map(r=>`
-          <div class="drow"><span class="avatar" style="width:30px;height:30px;font-size:11.5px">${initials(r.who)}</span>
+      <section class="card sv r-sv" aria-label="Decided, upcoming">
+        <div class="sv-text"><div class="sv-title">Decided <span class="ok">×${decided.length}</span></div><p>Upcoming leave you’ve already decided. You can change any of these until the leave ends.</p></div>
+        <div class="sv-div" aria-hidden="true"></div>
+        <div class="sv-badges">${decided.slice(0,2).map(r=>`<span class="tok ${r.status==='approved'?'appr':'rej'}" title="${esc(P(r.who).name+', '+r.status)}"><b>${initials(r.who)}</b><small>${r.days}d</small></span>`).join('')}${decided.length>2?`<span class="tok more"><b>+${decided.length-2}</b></span>`:''}</div>
+      </section>
+      <div class="card dlist">${decided.length?decided.map(r=>`
+          <div class="drow"><span class="avatar sm">${initials(r.who)}</span>
             <div class="who"><div>${esc(P(r.who).name)}</div><div>${TYPES[r.type].label} · ${rangeShort(r.start,r.end)} · ${plural(r.days,'day')}</div></div>
             <span class="pill ${r.status}">${cap(r.status)}</span>
             <div class="dacts">
-              <button class="btn ghost small" data-act="${r.status==='approved'?'reject':'approve'}" data-id="${r.id}">${r.status==='approved'?'Reject':'Approve'}</button>
+              <button class="btn ghost small" data-act="${r.status==='approved'?'reject':'approve'}" data-id="${r.id}">${r.status==='approved'?'Change to rejected':'Change to approved'}</button>
               <button class="linkbtn" data-act="reopen" data-id="${r.id}">Back to pending</button>
             </div></div>`).join(''):`<div class="empty"><p>Approved or rejected leave that hasn’t ended yet will be listed here, so you can change your mind.</p></div>`}
-        </div>
       </div>
     </div>
   </div>`;
   renderCal();
 }
-
+const ART_REVIEW=`<svg class="s-art" viewBox="0 0 140 140" aria-hidden="true">
+  <circle cx="106" cy="34" r="20" fill="var(--sun)"/>
+  <rect x="26" y="30" width="80" height="98" rx="20" fill="var(--sun-2)"/>
+  <rect x="48" y="22" width="36" height="18" rx="9" fill="var(--accent)"/>
+  <path d="M44 74l11 10 22-22" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="44" y="98" width="44" height="8" rx="4" fill="var(--accent)" opacity=".45"/>
+</svg>`;
 function clashList(r){
   const c=clashesFor(r);
   return c.length?`<div class="overlap">${ICON.warn}<ul>${c.map(o=>{const s=o.start>r.start?o.start:r.start,e=o.end<r.end?o.end:r.end;return`<li>Overlaps <b>${esc(P(o.who).name)}</b> (${o.status}, ${TYPES[o.type].short.toLowerCase()}) on ${rangeShort(s,e)}</li>`}).join('')}</ul></div>`
@@ -213,8 +229,8 @@ function renderCal(){
       <button class="iconbtn" data-act="next" aria-label="Next month">${ICON.next}</button>
     </div>
     <p class="cal-sum"><b>${appr}</b> approved · <b>${pend}</b> pending · <b>${clashDays}</b> ${clashDays===1?'day':'days'} with 2+ people off</p>
-    <div class="grid"><div class="dows">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="dow">${d}</div>`).join('')}</div>${html}</div>
-    <div class="legend"><span><i class="sw approved"></i>Approved</span><span><i class="sw pending"></i>Pending</span><span><i class="sw clash"></i>2+ people off</span><span><i class="sw hl"></i>Selected request</span><span>Bars read: name · leave type · total days</span></div>`;
+    <div class="grid"><div class="dows">${['M','T','W','T','F','S','S'].map(d=>`<div class="dow">${d}</div>`).join('')}</div>${html}</div>
+    <div class="legend"><span><i class="sw approved"></i>Approved</span><span><i class="sw pending"></i>Pending</span><span><i class="sw clash"></i>2+ people off</span><span><i class="sw hl"></i>Selected request</span><span>Bars show name · type · days</span></div>`;
   paintHighlight(state.pinned);
 }
 
@@ -271,9 +287,17 @@ function renderApply(){
   const el=document.getElementById('v-apply');
   const me=P(state.viewer);
   el.innerHTML=`
-  <div class="view-head"><div><h2>Request leave</h2><p>Pick the leave type and your dates, then send. ${isLead()?'Your request joins the review queue.':'Maya gets it straight away and you’ll see her decision under My status.'}</p></div></div>
-  <div class="apply">
-    <form class="card" id="leave-form" novalidate>
+  <div class="s-wrap">
+    <section class="s-hero" aria-label="Your new request">
+      <div class="s-hero-text">
+        <div class="s-hi">New request</div>
+        <div class="s-num" id="a-num">0</div>
+        <div class="s-head" id="a-head">days selected</div>
+        <p class="s-sub" id="a-sub">Pick a leave type and your dates. The days are counted for you, weekends included.</p>
+      </div>
+      ${ART_APPLY}
+    </section>
+    <form class="card a-form" id="leave-form" novalidate>
       <div class="row2">
         <div class="field"><label for="f-name">Applicant</label><input id="f-name" value="${esc(me.name)}" readonly></div>
         <div class="field"><label for="f-applied">Date of application</label><input id="f-applied" value="${fmt(TODAY_ISO,{year:1})}" readonly></div>
@@ -286,21 +310,27 @@ function renderApply(){
         <div class="field"><label for="f-start">First day of leave</label><input type="date" id="f-start" min="${TODAY_ISO}" required><span class="err" id="e-start"></span></div>
         <div class="field"><label for="f-end">Last day of leave</label><input type="date" id="f-end" min="${TODAY_ISO}" required><span class="err" id="e-end"></span></div>
       </div>
-      <div class="duration" id="duration"></div>
+      <div class="field"><label for="f-days">Duration</label><input id="f-days" readonly value="Choose both dates"></div>
       <div class="field"><label for="f-reason">Note for your lead <span class="hint">(optional)</span></label><textarea id="f-reason" maxlength="140" placeholder="e.g. Family trip, medical appointment"></textarea></div>
       <div class="form-foot"><button type="reset" class="btn ghost">Clear</button><button type="submit" class="btn primary">Submit request</button></div>
     </form>
-    <aside class="card howto">
-      <span class="eyebrow">What happens next</span>
-      <ol class="steps">
-        <li><span><b>Your request is logged as Pending</b>It appears on the team calendar with your name, leave type and number of days.</span></li>
-        <li><span><b>${isLead()?'You review it':'Maya reviews it'}</b>${isLead()?'It sits in your queue with any overlaps flagged.':'She sees who else is off on the same days before deciding.'}</span></li>
-        <li><span><b>You get notified</b>The decision, and any later change to it, lands in your updates. No need to chase.</span></li>
-      </ol>
-    </aside>
+    <section class="card sv" aria-label="What happens next">
+      <div class="sv-text"><div class="sv-title">What happens next</div><p>${isLead()?'Your request joins your review queue.':'Maya sees who else is off before deciding.'} The decision lands in My status & updates, so there’s no need to chase.</p></div>
+      <div class="sv-div" aria-hidden="true"></div>
+      <div class="sv-badges"><span class="tok step"><b>1</b><small>Sent</small></span><span class="tok step"><b>2</b><small>Review</small></span><span class="tok step"><b>3</b><small>Notified</small></span></div>
+    </section>
   </div>`;
   updateType();updateDuration();
 }
+const ART_APPLY=`<svg class="s-art" viewBox="0 0 140 140" aria-hidden="true">
+  <circle cx="104" cy="32" r="20" fill="var(--sun)"/>
+  <rect x="20" y="36" width="96" height="90" rx="22" fill="var(--sun-2)"/>
+  <rect x="20" y="36" width="96" height="26" rx="13" fill="var(--accent)"/>
+  <rect x="40" y="26" width="9" height="20" rx="4.5" fill="var(--accent)"/>
+  <rect x="87" y="26" width="9" height="20" rx="4.5" fill="var(--accent)"/>
+  <rect x="38" y="80" width="62" height="22" rx="11" fill="var(--accent)" opacity=".35"/>
+  <circle cx="89" cy="91" r="11" fill="var(--accent)"/>
+</svg>`;
 const curType=()=>document.querySelector('input[name=ltype]:checked')?.value||'annual';
 function updateType(){
   const sick=curType()==='sick';
@@ -310,10 +340,20 @@ function updateType(){
   document.getElementById('type-hint').textContent=sick?`Sick leave can be backdated up to ${SICK_BACKDATE} days.`:'';
 }
 function updateDuration(){
-  const s=document.getElementById('f-start')?.value,e=document.getElementById('f-end')?.value,box=document.getElementById('duration');
-  if(!box)return;
-  if(s&&e&&e>=s){const n=span(s,e);box.innerHTML=`<div class="n">${n}</div><div class="t"><b>${n===1?'calendar day':'calendar days'} of ${TYPES[curType()].label.toLowerCase()}</b>${range(s,e)} · weekends included</div>`}
-  else box.innerHTML=`<div class="n">–</div><div class="t"><b>Duration</b>Choose both dates and the number of days is worked out for you.</div>`;
+  const s=document.getElementById('f-start')?.value,e=document.getElementById('f-end')?.value;
+  const num=document.getElementById('a-num'),head=document.getElementById('a-head'),sub=document.getElementById('a-sub'),f=document.getElementById('f-days');
+  if(!num)return;
+  const t=TYPES[curType()].label.toLowerCase();
+  if(s&&e&&e>=s){
+    const n=span(s,e);
+    num.textContent=n;head.textContent=`${n===1?'day':'days'} of ${t}`;
+    sub.textContent=`${range(s,e)} · weekends included`;
+    f.value=`${plural(n,'calendar day')}`;
+  }else{
+    num.textContent='0';head.textContent='days selected';
+    sub.textContent='Pick a leave type and your dates. The days are counted for you, weekends included.';
+    f.value='Choose both dates';
+  }
 }
 
 /* ---------- Status screen ---------- */
@@ -528,7 +568,6 @@ document.addEventListener('submit',e=>{
 function render(){
   if(!isLead()&&state.view==='review')state.view='status';
   renderTabs();
-  document.body.classList.toggle('status-bg',state.view==='status');
   ['review','apply','status'].forEach(v=>document.getElementById('v-'+v).hidden=state.view!==v);
   if(isLead())renderReview();else document.getElementById('v-review').innerHTML='';
   renderApply();renderStatus();
