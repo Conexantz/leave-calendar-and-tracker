@@ -466,3 +466,28 @@ function render(){
 }
 render();
 })();
+
+/* ---------- Appearance toggle ---------- */
+(function(){
+  const btn=document.getElementById('theme-toggle');if(!btn)return;
+  const root=document.documentElement;
+  const mq=window.matchMedia('(prefers-color-scheme: dark)');
+  const current=()=>root.getAttribute('data-theme')||(mq.matches?'dark':'light');
+  function sync(){
+    const dark=current()==='dark';
+    const next=dark?'light':'dark';
+    btn.classList.toggle('is-dark',dark);
+    btn.setAttribute('aria-pressed',String(dark));
+    btn.setAttribute('aria-label',`Switch to ${next} mode`);
+    btn.title=`Switch to ${next} mode`;
+    btn.querySelector('.theme-label').textContent=dark?'Light':'Dark';
+  }
+  btn.addEventListener('click',()=>{
+    const next=current()==='dark'?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem('lp-theme',next)}catch(e){}
+    sync();
+  });
+  mq.addEventListener?.('change',sync);
+  sync();
+})();

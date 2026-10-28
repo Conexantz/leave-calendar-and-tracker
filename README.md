@@ -5,6 +5,7 @@ A single-page prototype for a small team to request leave, see it on a shared ca
 ## Screens
 - **Review & calendar** (team lead): month calendar showing each person's leave as a bar (name · leave type · days). Click a bar to approve, reject or reopen. Amber days flag 2+ people off. A review queue sits beside it with overlap warnings and one-click decisions.
 - **Request leave**: applicant and application date fill in automatically; choose Annual, Sick, Family care or Childcare leave and the dates. Duration counts calendar days including weekends.
+- **Appearance toggle**: the header button switches between light and dark mode. It starts from the device setting and remembers your choice in this browser.
 - **My status & updates**: each request's status (Pending / Approved / Rejected) plus a notifications feed.
 
 ## Prototype limits
